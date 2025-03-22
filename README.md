@@ -153,33 +153,3 @@ def should_continue(state: State):
 ```
 
 This function allows the agent to make decisions about the next steps based on the current state.
-
-## Usage
-
-To use the SQL Agent, you'll need:
-
-1. A database connection (SQLite in this example)
-2. A language model (we're using Llama via Groq)
-3. The LangChain and LangGraph libraries
-
-Once set up, you can query your database with natural language:
-
-```python
-from langchain_core.messages import HumanMessage
-
-query = {
-    "messages": [
-        HumanMessage(content="how many orders are there which is more than 300 rupees?")
-    ]
-}
-
-# Get the full response with all intermediate steps
-response = app.invoke(query)
-
-# Get just the final answer
-final_answer = response["messages"][-1].tool_calls[0]["args"]["final_answer"]
-
-# To see the step-by-step processing, use stream()
-for chunk in app.stream(query):
-    print(chunk)
-```
