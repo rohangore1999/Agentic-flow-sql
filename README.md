@@ -26,6 +26,79 @@ class State(TypedDict):
 
 The `State` class is crucial for maintaining context throughout the agent's workflow. It stores conversation history and enables stateful reasoning across multiple steps.
 
+#### Memory in LangGraph Agents
+
+In the context of our SQL agent, "memory" refers to how the agent maintains state and context throughout a conversation or workflow. This is crucial for creating coherent multi-step interactions.
+
+#### Implementation of Memory
+
+In our SQL agent, memory is implemented through the `State` class:
+
+```python
+class State(TypedDict):
+    messages: Annotated[list[AnyMessage], add_messages]
+```
+
+This might look simple, but it's powerful. The `State` object:
+
+1. Persists throughout the entire execution of the agent workflow
+2. Is passed from node to node in the graph
+3. Contains the full conversation history in the `messages` list
+4. Uses the special `add_messages` annotation to properly append new messages
+
+#### How Memory is Used
+
+The SQL agent uses memory in several critical ways:
+
+#### 1. Contextual Understanding
+
+When a user asks "How many orders are more than 300 rupees?", the agent remembers:
+
+- That it's working with a database
+- What tables are available (from the `list_tables_tool` node)
+- The schema of those tables (from the `get_schema_tool` node)
+
+#### 2. Stateful Processing
+
+Each node in the workflow graph can:
+
+- Read information from the state: `messages = state["messages"]`
+- Add information to the state: `return {"messages": [response]}`
+
+#### 3. Workflow Decision Making
+
+The `should_continue` function examines the memory to decide what happens next:
+
+```python
+def should_continue(state: State):
+    messages = state["messages"]
+    last_message = messages[-1]
+
+    if getattr(last_message, "tool_calls", None):
+        return END
+    elif last_message.content.startswith("Error: "):
+        return "query_gen"
+    else:
+        return "correct_query"
+```
+
+#### 4. Error Recovery
+
+When errors occur, they're recorded in the state, allowing the agent to:
+
+- Remember what went wrong
+- Adjust its approach in subsequent steps
+- Provide feedback based on the history of the interaction
+
+#### Benefits of Memory in Agents
+
+1. **Coherence**: The agent provides responses that make sense in the context of the entire conversation
+2. **Progressive refinement**: Each step builds on previous steps
+3. **Error correction**: The agent can remember and learn from mistakes
+4. **Context awareness**: The agent doesn't need to re-query database tables or schema repeatedly
+
+This stateful approach is what makes the agent truly "agentic" rather than just a series of disconnected function calls. The memory provides the continuity that enables complex reasoning across multiple steps.
+
 ### 2. Tools and Tool Binding
 
 Tools are functions that allow the agent to perform specific actions:
